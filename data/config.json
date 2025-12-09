@@ -1,0 +1,16 @@
+{
+    "smtp": {
+        "host": "10.103.30.200",
+        "port": 2526,
+        "user": "bonjour",
+        "password": "j7g8WN5Ni",
+        "from_email": "bonjour@datacorp-it.fr"
+    },
+    "campaign": {
+        "daily_limit": 500,
+        "min_delay_seconds": 30,
+        "max_delay_seconds": 300,
+        "template_file": "email_template.html",
+        "subject": "Level up avec nous ?"
+    }
+}
