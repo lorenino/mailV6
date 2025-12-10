@@ -9,9 +9,9 @@ services:
     volumes:
       - ./data:/app/data
     restart: unless-stopped
- networks:
-    - npm-net
+    networks:
+      - npm-net
+
 networks:
   npm-net:
-    external: true
     enable_ipv6: true
