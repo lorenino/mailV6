@@ -6,8 +6,9 @@ services:
     container_name: campagne-mail-dashboard
     ports:
       - "8501:8501"
-    volumes:
-      - ./data:/app/data
+    # Volume retiré - les données sont dans l'image Docker
+    # volumes:
+    #   - ./data:/app/data
     restart: unless-stopped
     networks:
       - npm-net
