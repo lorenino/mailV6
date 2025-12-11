@@ -6,12 +6,4 @@ services:
     container_name: campagne-mail-dashboard
     ports:
       - "8501:8501"
-    volumes:
-      - ./data:/app/data
     restart: unless-stopped
-    networks:
-      - npm-net
-
-networks:
-  npm-net:
-    enable_ipv6: true
