@@ -29,18 +29,25 @@ def load_template(template_file):
     with open(template_file, 'r', encoding='utf-8') as f:
         return f.read()
 
-def update_status(message, running=True, progress=None):
-    """Writes the current status to a JSON file."""
+def update_status(message, running=True, progress=None, sent=0, remaining=0, failed=0, mode=""):
+    """Writes the current status to a JSON file with detailed info."""
     status = {
         "running": running,
         "message": message,
-        "timestamp": time.time()
+        "timestamp": time.time(),
+        "sent": sent,
+        "remaining": remaining,
+        "failed": failed,
+        "mode": mode
     }
-    if progress:
+    if progress is not None:
         status["progress"] = progress
-        
-    with open(STATUS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(status, f)
+    
+    try:
+        with open(STATUS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(status, f)
+    except Exception as e:
+        print(f"[ERROR] Failed to write status file: {e}")
 
 def check_stop_flag():
     """Checks if the stop flag file exists."""
@@ -72,76 +79,128 @@ def send_email(smtp_config, to_email, subject, html_content, debug=False):
         return False
 
 def main(dry_run=False):
+    mode_str = "TEST" if dry_run else "RÉEL"
+    
     # Clear any existing stop flag on startup
     if os.path.exists(STOP_FLAG_FILE):
         os.remove(STOP_FLAG_FILE)
 
-    update_status("Démarrage de la campagne...", running=True)
+    update_status(f"Démarrage en mode {mode_str}...", running=True, mode=mode_str)
     
-    config = load_config()
-    if not config:
-        return
-
-    camp_conf = config['campaign']
-    smtp_conf = config['smtp']
-    
-    # Prepend ../data/ to template file path if it's just a filename
-    template_path = camp_conf['template_file']
-    if not os.path.isabs(template_path) and not template_path.startswith('../'):
-         template_path = os.path.join('../data', template_path)
-
-    template = load_template(template_path)
-    if not template:
-        return
-
-    clients = get_unsent_clients()
-    total_to_send = len(clients)
-    
-    if total_to_send == 0:
-        update_status("Aucun email à envoyer.", running=False)
-        return
-
-    update_status(f"Prêt à envoyer {total_to_send} emails.", running=True)
-    
-    count = 0
-    for i, client in enumerate(clients):
-        if check_stop_flag():
-            update_status("Campagne stoppée par l'utilisateur.", running=False)
-            print("Stop flag detected. Exiting.")
+    try:
+        config = load_config()
+        if not config:
             return
 
-        email = client['Email 1']
-        client_id = client['id']
+        camp_conf = config['campaign']
+        smtp_conf = config['smtp']
+        daily_limit = camp_conf.get('daily_limit', 500)
         
-        # Update status with current action
-        progress_pct = int((i / total_to_send) * 100)
-        update_status(f"Envoi en cours à {email}...", running=True, progress=progress_pct)
-        
-        # Personalization
-        personalized_html = template # Add replacement logic here if needed
+        # Prepend ../data/ to template file path if it's just a filename
+        template_path = camp_conf['template_file']
+        if not os.path.isabs(template_path) and not template_path.startswith('../'):
+             template_path = os.path.join('../data', template_path)
 
-        if not dry_run:
-            success = send_email(smtp_conf, email, camp_conf['subject'], personalized_html)
-            if success:
-                mark_as_sent(client_id)
-                count += 1
-                
-                # Random delay
-                delay = random.randint(camp_conf['min_delay_seconds'], camp_conf['max_delay_seconds'])
-                for d in range(delay, 0, -1):
-                    if check_stop_flag():
-                        update_status("Campagne stoppée pendant le délai.", running=False)
-                        return
-                    update_status(f"Pause: reprise dans {d}s (Envoyé à {email})", running=True, progress=progress_pct)
-                    time.sleep(1)
+        template = load_template(template_path)
+        if not template:
+            return
+
+        clients = get_unsent_clients()
+        total_to_send = min(len(clients), daily_limit)  # Respect daily limit
+        remaining = len(clients)
+        
+        if total_to_send == 0:
+            update_status("Aucun email à envoyer.", running=False, sent=0, remaining=0, mode=mode_str)
+            return
+
+        update_status(
+            f"Prêt: {total_to_send} emails à envoyer (limite: {daily_limit}/jour)", 
+            running=True, remaining=total_to_send, mode=mode_str
+        )
+        
+        sent_count = 0
+        failed_count = 0
+        failed_emails = []
+        
+        for i, client in enumerate(clients[:total_to_send]):  # Apply daily limit
+            if check_stop_flag():
+                update_status(
+                    f"Stoppé: {sent_count} envoyés, {failed_count} échecs", 
+                    running=False, sent=sent_count, remaining=total_to_send-i, failed=failed_count, mode=mode_str
+                )
+                print("Stop flag detected. Exiting.")
+                return
+
+            email = client.get('Email 1', '')
+            client_id = client.get('id')
+            client_name = client.get('Nom', 'N/A')
+            
+            if not email:
+                print(f"[SKIP] Client {client_id} has no email")
+                failed_count += 1
+                continue
+            
+            # Update status with current action
+            progress_pct = int(((i + 1) / total_to_send) * 100)
+            current_remaining = total_to_send - i - 1
+            
+            update_status(
+                f"Envoi {i+1}/{total_to_send}: {email}", 
+                running=True, progress=progress_pct, sent=sent_count, remaining=current_remaining, failed=failed_count, mode=mode_str
+            )
+            
+            # Personalization
+            personalized_html = template  # Add replacement logic here if needed
+
+            if not dry_run:
+                success = send_email(smtp_conf, email, camp_conf['subject'], personalized_html)
+                if success:
+                    try:
+                        mark_as_sent(client_id)
+                        sent_count += 1
+                    except Exception as db_error:
+                        print(f"[DB ERROR] Failed to mark {email} as sent: {db_error}")
+                        failed_count += 1
+                        failed_emails.append(email)
+                        continue
+                    
+                    # Random delay
+                    delay = random.randint(camp_conf['min_delay_seconds'], camp_conf['max_delay_seconds'])
+                    for d in range(delay, 0, -1):
+                        if check_stop_flag():
+                            update_status(
+                                f"Stoppé pendant pause: {sent_count} envoyés", 
+                                running=False, sent=sent_count, remaining=current_remaining, failed=failed_count, mode=mode_str
+                            )
+                            return
+                        update_status(
+                            f"Pause {d}s - Dernier: {email}", 
+                            running=True, progress=progress_pct, sent=sent_count, remaining=current_remaining, failed=failed_count, mode=mode_str
+                        )
+                        time.sleep(1)
+                else:
+                    failed_count += 1
+                    failed_emails.append(email)
+                    print(f"[FAILED] {email}")
             else:
-                print(f"Failed to send to {email}")
-        else:
-            print(f"[DRY RUN] Would send to {email}")
-            count += 1
-            time.sleep(1)
+                print(f"[DRY RUN] {email}")
+                sent_count += 1
+                time.sleep(0.5)  # Shorter delay in test mode
 
-    update_status("Campagne terminée avec succès !", running=False, progress=100)
+        # Final status
+        status_msg = f"Terminé! {sent_count} envoyés"
+        if failed_count > 0:
+            status_msg += f", {failed_count} échecs"
+        update_status(status_msg, running=False, progress=100, sent=sent_count, remaining=0, failed=failed_count, mode=mode_str)
+        
+        if failed_emails:
+            print(f"[REPORT] Failed emails: {failed_emails}")
+            
+    except Exception as e:
+        error_msg = f"Erreur critique: {str(e)[:100]}"
+        print(f"[CRITICAL] {e}")
+        update_status(error_msg, running=False, failed=1, mode=mode_str)
+        raise
 
 if __name__ == "__main__":
     # Check for command line argument to disable dry_run

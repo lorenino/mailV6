@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import time
+from streamlit_autorefresh import st_autorefresh
 from db_utils import get_all_clients_df
 
 # Page Configuration
@@ -59,7 +60,20 @@ def get_mailer_status():
     return None
 
 def main():
+    # Auto-refresh every 3 seconds when campaign is running (non-blocking)
+    st_autorefresh(interval=3000, limit=None, key="data_refresh")
+    
     st.title("🚀 Dashboard de Suivi - Campagne Email")
+    
+    # --- Initialize Session State for transitions ---
+    if 'launching' not in st.session_state:
+        st.session_state.launching = False
+    if 'stopping' not in st.session_state:
+        st.session_state.stopping = False
+    if 'launch_time' not in st.session_state:
+        st.session_state.launch_time = 0
+    if 'stop_time' not in st.session_state:
+        st.session_state.stop_time = 0
     
     # --- Control Panel ---
     st.sidebar.header("🎛️ Panneau de Contrôle")
@@ -67,45 +81,104 @@ def main():
     status_data = get_mailer_status()
     is_running = status_data.get('running', False) if status_data else False
     
-    if is_running:
-        st.sidebar.success("🟢 Campagne en cours")
-        if st.sidebar.button("🛑 STOPPER LA CAMPAGNE", type="primary"):
+    # Auto-clear transition states after timeout (10 seconds) or when state changes
+    current_time = time.time()
+    if st.session_state.launching and (is_running or current_time - st.session_state.launch_time > 10):
+        st.session_state.launching = False
+    if st.session_state.stopping and (not is_running or current_time - st.session_state.stop_time > 10):
+        st.session_state.stopping = False
+    
+    # Check if in a transitional state
+    is_transitioning = st.session_state.launching or st.session_state.stopping
+    
+    if is_transitioning:
+        # Show transitional state with disabled buttons
+        if st.session_state.launching:
+            st.sidebar.warning("⏳ **Démarrage en cours...**")
+            st.sidebar.info("Le processus d'envoi est en train de s'initialiser. Veuillez patienter.")
+            with st.sidebar:
+                st.spinner("Initialisation du mailer...")
+        else:  # stopping
+            st.sidebar.warning("⏳ **Arrêt en cours...**")
+            st.sidebar.info("Le signal d'arrêt a été envoyé. Le processus s'arrêtera après l'email en cours.")
+        
+        # Disabled button placeholder
+        st.sidebar.button("⏳ Veuillez patienter...", disabled=True, type="secondary")
+        
+    elif is_running:
+        mode = status_data.get('mode', '') if status_data else ''
+        mode_emoji = "🧪" if mode == "TEST" else "📤"
+        st.sidebar.success(f"{mode_emoji} **Campagne en cours ({mode})**")
+        st.sidebar.markdown("---")
+        
+        # Show detailed stats
+        if status_data:
+            # Stats row
+            col1, col2, col3 = st.sidebar.columns(3)
+            with col1:
+                st.metric("✅ Envoyés", status_data.get('sent', 0))
+            with col2:
+                st.metric("⏳ Restants", status_data.get('remaining', 0))
+            with col3:
+                failed = status_data.get('failed', 0)
+                st.metric("❌ Échecs", failed, delta_color="inverse" if failed > 0 else "off")
+            
+            # Current activity
+            msg = status_data.get('message', '')
+            st.sidebar.markdown(f"**📨 {msg}**")
+            
+            if 'progress' in status_data:
+                st.sidebar.progress(status_data['progress'] / 100)
+                st.sidebar.caption(f"Progression: {status_data['progress']}%")
+        
+        st.sidebar.markdown("---")
+        if st.sidebar.button("🛑 STOPPER LA CAMPAGNE", type="primary", use_container_width=True):
             with open(STOP_FLAG_FILE, 'w') as f:
                 f.write('STOP')
-            st.sidebar.warning("Signal d'arrêt envoyé...")
-            time.sleep(1)
+            st.session_state.stopping = True
+            st.session_state.stop_time = time.time()
             st.rerun()
     else:
-        st.sidebar.info("🔴 Campagne à l'arrêt")
+        st.sidebar.info("🔴 **Campagne à l'arrêt**")
+        st.sidebar.markdown("---")
         
         # Test Mode Toggle
-        is_dry_run = st.sidebar.checkbox("Mode Test (Dry Run)", value=True, help="Si coché, aucun email ne sera réellement envoyé.")
+        is_dry_run = st.sidebar.checkbox(
+            "🧪 Mode Test (Dry Run)", 
+            value=True, 
+            help="Si coché, aucun email ne sera réellement envoyé. Utile pour tester le processus."
+        )
         
-        if st.sidebar.button("▶️ LANCER LA CAMPAGNE"):
-            # Launch mailer.py in a separate process using the same interpreter
-            # mailer.py is in the same directory as this script
+        # Show mode explanation
+        if is_dry_run:
+            st.sidebar.caption("✅ Mode sécurisé: les emails seront simulés")
+        else:
+            st.sidebar.warning("⚠️ Mode réel: les emails seront vraiment envoyés!")
+        
+        st.sidebar.markdown("---")
+        
+        if st.sidebar.button("▶️ LANCER LA CAMPAGNE", type="primary", use_container_width=True):
+            # Set transitional state BEFORE launching
+            st.session_state.launching = True
+            st.session_state.launch_time = time.time()
+            
+            # Launch mailer.py in a separate process
             mailer_path = os.path.join(SCRIPT_DIR, "mailer.py")
             cmd = [sys.executable, mailer_path]
             if not is_dry_run:
                 cmd.append("--real")
             
-            # creationflags is Windows specific, cwd ensures correct working directory
             kwargs = {'cwd': SCRIPT_DIR}
             if os.name == 'nt':
                 kwargs['creationflags'] = subprocess.CREATE_NO_WINDOW
                 
             subprocess.Popen(cmd, **kwargs)
-            
-            mode_msg = "TEST (Dry Run)" if is_dry_run else "RÉEL"
-            st.sidebar.success(f"Démarrage initié en mode {mode_msg}...")
-            time.sleep(2)
             st.rerun()
 
-    if status_data:
-        st.sidebar.markdown(f"**Status:** {status_data.get('message', '')}")
-        if 'progress' in status_data:
-            st.sidebar.progress(status_data['progress'] / 100)
-        st.sidebar.text(f"Dernière MAJ: {time.strftime('%H:%M:%S', time.localtime(status_data.get('timestamp', 0)))}")
+    # Show last update timestamp at bottom of sidebar
+    if status_data and not is_transitioning:
+        st.sidebar.markdown("---")
+        st.sidebar.caption(f"🕐 Dernière MAJ: {time.strftime('%H:%M:%S', time.localtime(status_data.get('timestamp', 0)))}")
 
     st.markdown("---")
 
@@ -171,11 +244,8 @@ def main():
             }
         )
         
-        # Auto-refresh logic
-        if is_running:
-            time.sleep(2) # Refresh every 2s if running
-            st.rerun()
-        elif st.button('🔄 Actualiser les données'):
+        # Manual refresh button (auto-refresh is already handled by st_autorefresh)
+        if st.button('🔄 Actualiser les données'):
             st.rerun()
 
     else:

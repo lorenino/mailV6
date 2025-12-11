@@ -25,6 +25,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN apk del .build-deps
 
 # Copy application code
+COPY .streamlit /root/.streamlit
 COPY . .
 
 # Expose Streamlit port
