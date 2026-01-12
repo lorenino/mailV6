@@ -16,11 +16,37 @@ STOP_FLAG_FILE = os.path.join(DATA_DIR, 'stop.flag')
 STATUS_FILE = os.path.join(DATA_DIR, 'status.json')
 
 def load_config():
-    if not os.path.exists(CONFIG_FILE):
-        update_status("Erreur: Config introuvable", running=False)
+    """Load config from environment variables (priority) or config.json (fallback)."""
+    # Try to load base config from file
+    base_config = {}
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            base_config = json.load(f)
+    
+    # Override with environment variables if set
+    config = {
+        "smtp": {
+            "host": os.environ.get("SMTP_HOST", base_config.get("smtp", {}).get("host", "")),
+            "port": int(os.environ.get("SMTP_PORT", base_config.get("smtp", {}).get("port", 25))),
+            "user": os.environ.get("SMTP_USER", base_config.get("smtp", {}).get("user", "")),
+            "password": os.environ.get("SMTP_PASSWORD", base_config.get("smtp", {}).get("password", "")),
+            "from_email": os.environ.get("SMTP_FROM_EMAIL", base_config.get("smtp", {}).get("from_email", ""))
+        },
+        "campaign": {
+            "daily_limit": int(os.environ.get("CAMPAIGN_DAILY_LIMIT", base_config.get("campaign", {}).get("daily_limit", 500))),
+            "min_delay_seconds": int(os.environ.get("CAMPAIGN_MIN_DELAY", base_config.get("campaign", {}).get("min_delay_seconds", 30))),
+            "max_delay_seconds": int(os.environ.get("CAMPAIGN_MAX_DELAY", base_config.get("campaign", {}).get("max_delay_seconds", 300))),
+            "template_file": base_config.get("campaign", {}).get("template_file", "email_template.html"),
+            "subject": os.environ.get("CAMPAIGN_SUBJECT", base_config.get("campaign", {}).get("subject", ""))
+        }
+    }
+    
+    # Validate required fields
+    if not config["smtp"]["host"] or not config["smtp"]["from_email"]:
+        update_status("Erreur: Config SMTP incomplète", running=False)
         return None
-    with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    
+    return config
 
 def load_template(template_file):
     if not os.path.exists(template_file):

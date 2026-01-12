@@ -2,69 +2,137 @@
 <html>
 
 <head>
+    <meta charset="UTF-8">
     <style>
         body {
-            font-family: Arial, sans-serif;
-            color: #333;
-            line-height: 1.6;
-            max-width: 600px;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #2c3e50;
+            line-height: 1.8;
+            max-width: 650px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 0;
+            background-color: #f8f9fa;
+        }
+
+        .email-container {
+            background: linear-gradient(135deg, #ffffff 0%, #f5f7fa 100%);
+            border-radius: 12px;
+            padding: 40px;
+            margin: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
         }
 
         .header {
             text-align: center;
-            margin-bottom: 30px;
-            font-size: 12px;
+            margin-bottom: 35px;
+            padding-bottom: 25px;
+            border-bottom: 2px solid #e8e8e8;
         }
 
-        .logo {
-            text-align: center;
-            margin-bottom: 40px;
+        .logo-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+
+        .company-names {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1a365d;
+        }
+
+        .company-names span {
+            color: #c53030;
+        }
+
+        .greeting {
+            font-size: 18px;
+            color: #2d3748;
+            margin-bottom: 25px;
+            font-weight: 600;
         }
 
         .content {
-            margin-bottom: 30px;
+            font-size: 15px;
+            color: #4a5568;
         }
 
-        .button-container {
+        .content p {
+            margin-bottom: 18px;
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, #ffeaa7 0%, #fdcb6e 100%);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .signature {
+            margin-top: 35px;
+            padding-top: 25px;
+            border-top: 1px solid #e2e8f0;
             text-align: center;
-            margin-top: 40px;
         }
 
-        .button {
-            background-color: #000;
-            color: #fff;
-            padding: 10px 20px;
-            text-decoration: none;
-            border-radius: 5px;
-            font-weight: bold;
+        .signature-text {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a365d;
+            margin-bottom: 10px;
+        }
+
+        .year-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 28px;
+            font-weight: 800;
+            padding: 12px 30px;
+            border-radius: 50px;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 12px;
+            color: #a0aec0;
         }
     </style>
 </head>
 
 <body>
-    <div class="logo">
-        <img src="https://media.licdn.com/dms/image/v2/C4D1BAQGdZQ2ziJAHKA/company-background_10000/company-background_10000/0/1583654716593/datacorp_lyon_cover?e=2147483647&v=beta&t=JomplzPBgNR2LOnvUyqMZAY3dRuwwZahJE59Ov8gQrs"
-            alt="DATACORP Lyon" style="max-width: 200px;">
+    <div class="email-container">
+        <div class="header">
+            <div class="company-names">
+                V6 Sécurité <span>&</span> V8 Incendie
+            </div>
+        </div>
+
+        <div class="content">
+            <p class="greeting">Chers clients, chers partenaires,</p>
+
+            <p>À l'aube de cette nouvelle année <span class="highlight">2026</span>, toute l'équipe de <strong>V6 Sécurité</strong> et <strong>V8 Incendie</strong> tient à vous adresser ses vœux les plus sincères.</p>
+
+            <p>Que cette année vous apporte <strong>réussite professionnelle</strong>, <strong>projets ambitieux</strong>, <strong>collaborations fructueuses</strong>, ainsi que santé, bonheur et sérénité pour vous et vos proches.</p>
+
+            <p>Nous vous remercions pour la confiance que vous nous accordez et pour la qualité des relations que nous avons bâties ensemble.</p>
+
+            <p>Nous avons hâte de poursuivre à vos côtés, avec la même exigence, la même réactivité et la même volonté de <strong>garantir votre sécurité au quotidien</strong>.</p>
+        </div>
+
+        <div class="signature">
+            <div class="year-badge">🎉 2026 🎉</div>
+            <div class="signature-text">Très belle année à vous tous !</div>
+            <p style="color: #718096; font-size: 14px;">L'équipe V6 Sécurité & V8 Incendie</p>
+        </div>
     </div>
 
-    <div class="content">
-        <p>Monsieur, Madame,</p>
-
-        <p>Nous avons identifié votre entreprise comme potentiellement intéressée par nos services. Conformément au
-            RGPD, nous souhaitons recueillir votre accord pour vous adresser, par voie électronique, nos communications
-            professionnelles.</p>
-
-        <p>Notre cabinet de conseil intervient sur des sujets d'expertise en infrastructure, étude et développement,
-            qualité logicielle et sécurité des systèmes d'information (Secure by Design).</p>
-
-        <p>Si vous souhaitez recevoir ces informations, merci de confirmer votre accord. Dans le cas contraire,
-            indiquez-le-nous afin de mettre à jour nos registres.</p>
-    </div>
-
-    <div class="button-container">
-        <a href="mailto:bonjour@datacorp-it.fr?subject=Accord%20RGPD" class="button">Nous répondre</a>
+    <div class="footer">
+        V6 Sécurité & V8 Incendie
     </div>
 </body>
 
