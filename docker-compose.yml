@@ -3,7 +3,6 @@ version: '3.8'
 services:
   dashboard:
     build: .
-    container_name: campagne-mail-v6
     ports:
       - "8501:8502"
     restart: unless-stopped
