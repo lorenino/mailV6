@@ -10,14 +10,14 @@ services:
     environment:
       # SMTP Configuration
       - SMTP_HOST=10.103.30.200
-      - SMTP_PORT=2527
-      - SMTP_USER=smtp
+      - SMTP_PORT=2727
+      - SMTP_USER=bonjour
       - SMTP_PASSWORD=ELp7iR2xb7za
-      - SMTP_FROM_EMAIL=info@V6Securite.fr
+      - SMTP_FROM_EMAIL=info@v6securite.fr
       # Campaign Configuration
       - CAMPAIGN_DAILY_LIMIT=500
       - CAMPAIGN_MIN_DELAY=30
       - CAMPAIGN_MAX_DELAY=300
-      - CAMPAIGN_SUBJECT=Meilleurs vœux 2026 - V6 Sécurité & V8 Incendie
+      - CAMPAIGN_SUBJECT=Meilleurs vœux 2026 - V6 Sécurité
     volumes:
       - ./data:/app/data
