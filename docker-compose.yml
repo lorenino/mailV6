@@ -5,7 +5,7 @@ services:
     build: .
     container_name: campagne-mail-v6
     ports:
-      - "8501:8501"
+      - "8501:8502"
     restart: unless-stopped
     environment:
       # SMTP Configuration
