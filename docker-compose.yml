@@ -13,8 +13,3 @@ services:
       - SMTP_USER=bonjour
       - SMTP_PASSWORD=ELp7iR2xb7za
       - SMTP_FROM_EMAIL=info@v6securite.fr
-      # Campaign Configuration
-      - CAMPAIGN_DAILY_LIMIT=500
-      - CAMPAIGN_MIN_DELAY=30
-      - CAMPAIGN_MAX_DELAY=300
-      - CAMPAIGN_SUBJECT=Meilleurs vœux 2026 - V6 Sécurité
