@@ -11,6 +11,6 @@
         "min_delay_seconds": 30,
         "max_delay_seconds": 300,
         "template_file": "email_template.html",
-        "subject": "Information importante : Extinction des réseaux 2G/3G"
+        "subject": "V6 Sécurité - Information importante : Extinction des réseaux 2G/3G"
     }
 }
