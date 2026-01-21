@@ -156,6 +156,30 @@ def main():
             st.sidebar.warning("⚠️ Mode réel: les emails seront vraiment envoyés!")
         
         st.sidebar.markdown("---")
+
+        # Quick Test Button
+        if st.sidebar.button("📧 Envoyer Test (lfaloci)", help="Envoie un email de test unique à lfaloci@datacorp-lyon.fr"):
+            with st.sidebar:
+                with st.spinner("Envoi du test..."):
+                    test_script = os.path.join(SCRIPT_DIR, "send_test.py")
+                    # Run synchronously to show result
+                    result = subprocess.run(
+                        [sys.executable, test_script], 
+                        capture_output=True, 
+                        text=True, 
+                        cwd=SCRIPT_DIR
+                    )
+                    
+                    if result.returncode == 0 and "✅ Test email sent successfully!" in result.stdout:
+                        st.success("Test envoyé avec succès !")
+                    else:
+                        st.error("Échec de l'envoi")
+                        # Show last few lines of output for debugging
+                        output = result.stdout + "\n" + result.stderr
+                        st.caption("Logs:")
+                        st.code(output[-500:])
+
+        st.sidebar.markdown("---")
         
         if st.sidebar.button("▶️ LANCER LA CAMPAGNE", type="primary", use_container_width=True):
             # Set transitional state BEFORE launching
